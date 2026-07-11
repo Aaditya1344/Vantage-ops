@@ -18,11 +18,16 @@
       <div class="brand">
         <span class="badge-fifa">FIFA WORLD CUP 2026™</span>
         <h1>Volunteer Ops Copilot</h1>
-        <p class="venue-sub">New York New Jersey Stadium (MetLife Stadium) • Capacity: 82,500</p>
+        <p class="venue-sub" id="venue-subtitle">Loading venue...</p>
       </div>
-      <div class="header-status" id="header-status-panel" aria-live="polite">
-        <span class="status-dot offline"></span>
-        <span class="status-text">No active snapshot</span>
+      <div class="header-actions">
+        <button id="theme-toggle" class="btn-theme-toggle" aria-label="Toggle dark or light theme" type="button">
+          <span id="theme-toggle-icon">🌙</span>
+        </button>
+        <div class="header-status" id="header-status-panel" aria-live="polite">
+          <span class="status-dot offline"></span>
+          <span class="status-text">No active snapshot</span>
+        </div>
       </div>
     </div>
   </header>

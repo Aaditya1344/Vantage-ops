@@ -3,44 +3,91 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('file-input');
   const uploadZone = document.getElementById('upload-zone');
   const btnClear = document.getElementById('btn-clear');
-  
+
   const metaFilename = document.getElementById('meta-filename');
   const metaType = document.getElementById('meta-type');
   const metaCount = document.getElementById('meta-count');
   const metaTimestamp = document.getElementById('meta-timestamp');
-  
+
   const tableHeaders = document.getElementById('table-headers');
   const tableBody = document.getElementById('table-body');
-  
+
   const queryForm = document.getElementById('query-form');
   const volunteerQuestion = document.getElementById('volunteer-question');
   const targetLang = document.getElementById('target-lang');
   const btnSubmit = document.getElementById('btn-submit');
-  
+
   const responseLoading = document.getElementById('response-loading');
   const responseEmpty = document.getElementById('response-empty');
   const responseCard = document.getElementById('response-card');
   const responseConsole = document.getElementById('response-console');
-  
+
   const urgencyBadge = document.getElementById('urgency-badge');
   const urgencyIcon = document.getElementById('urgency-icon');
   const urgencyText = document.getElementById('urgency-text');
-  
+
   const resultRecommendation = document.getElementById('result-recommendation');
   const resultReasoning = document.getElementById('result-reasoning');
   const translationBlock = document.getElementById('translation-block');
   const translationTitle = document.getElementById('translation-title');
   const resultTranslation = document.getElementById('result-translation');
-  
+
   const logTableBody = document.getElementById('log-table-body');
   const headerStatusPanel = document.getElementById('header-status-panel');
+  const themeToggle = document.getElementById('theme-toggle');
+  const themeToggleIcon = document.getElementById('theme-toggle-icon');
+  const venueSubtitle = document.getElementById('venue-subtitle');
 
   // Base API URL
   const API_BASE = '';
 
+  // Theme Configuration
+  const savedTheme = localStorage.getItem('theme');
+  const systemPrefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+  let currentTheme = savedTheme || (systemPrefersLight ? 'light' : 'dark');
+
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    currentTheme = theme;
+    if (theme === 'light') {
+      themeToggleIcon.textContent = '☀️';
+      themeToggle.setAttribute('aria-label', 'Switch to dark theme');
+    } else {
+      themeToggleIcon.textContent = '🌙';
+      themeToggle.setAttribute('aria-label', 'Switch to light theme');
+    }
+  }
+
+  // Initial Theme Application
+  applyTheme(currentTheme);
+
+  // Theme Toggle Event Listener
+  themeToggle.addEventListener('click', () => {
+    applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+  });
+
   // Initial Load
+  loadVenueConfig();
   refreshStatus();
   refreshHistory();
+
+  // Load Venue Config (single fixed venue per deployment)
+  async function loadVenueConfig() {
+    try {
+      const response = await fetch(`${API_BASE}/api/venue-config`);
+      if (response.ok) {
+        const venue = await response.json();
+        venueSubtitle.textContent = `${venue.officialTournamentName} (${venue.venueName}) • Capacity: ${venue.capacity.toLocaleString()}`;
+        document.title = `Volunteer Ops Copilot — ${venue.venueName}`;
+      } else {
+        venueSubtitle.textContent = 'MetLife Stadium • Capacity: 82,500';
+      }
+    } catch (err) {
+      console.error('Failed to load venue config:', err);
+      venueSubtitle.textContent = 'MetLife Stadium • Capacity: 82,500';
+    }
+  }
 
   // Drag and Drop handlers
   ['dragenter', 'dragover'].forEach(eventName => {
@@ -79,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!question) return;
 
-    // UI Feedback state
     btnSubmit.disabled = true;
     responseEmpty.classList.add('hidden');
     responseCard.classList.add('hidden');
@@ -157,16 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const status = await response.json();
 
       if (status.type !== 'empty') {
-        // Update header indicator
         headerStatusPanel.innerHTML = `<span class="status-dot online"></span><span class="status-text">Active: ${status.filename} (${status.type})</span>`;
-        
-        // Update metadata card
+
         metaFilename.textContent = status.filename || 'Unknown';
         metaType.textContent = formatSchemaType(status.type);
         metaCount.textContent = status.recordCount;
         metaTimestamp.textContent = new Date(status.timestamp).toLocaleTimeString();
-        
-        // Populate records table
+
         renderTable(status.data);
       } else {
         headerStatusPanel.innerHTML = `<span class="status-dot offline"></span><span class="status-text">No active snapshot</span>`;
@@ -174,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         metaType.textContent = '—';
         metaCount.textContent = '—';
         metaTimestamp.textContent = '—';
-        
+
         tableHeaders.innerHTML = `<th scope="col">No data loaded</th>`;
         tableBody.innerHTML = `<tr><td>Please upload a CSV dataset to view real-time records.</td></tr>`;
       }
@@ -196,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       logTableBody.innerHTML = history.map(entry => {
         const timeStr = new Date(entry.timestamp).toLocaleTimeString();
-        const transHtml = entry.fan_facing_translation 
+        const transHtml = entry.fan_facing_translation
           ? `<div class="log-trans"><strong>Translated (${entry.targetLanguage}):</strong> ${entry.fan_facing_translation}</div>`
           : '';
 
@@ -236,11 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function displayAIResponse(ai) {
-    // Recommendation & Reasoning
     resultRecommendation.textContent = ai.recommendation;
     resultReasoning.textContent = ai.reasoning;
 
-    // Urgency styling: icon + text + class
     urgencyBadge.className = `urgency-badge ${ai.urgency}`;
     urgencyText.textContent = ai.urgency;
     if (ai.urgency === 'high') {
@@ -251,7 +292,6 @@ document.addEventListener('DOMContentLoaded', () => {
       urgencyIcon.textContent = 'ℹ️';
     }
 
-    // Translation block
     if (ai.fan_facing_translation) {
       translationBlock.classList.remove('hidden');
       translationTitle.textContent = `Translation for Fan (${targetLang.value}):`;
@@ -265,8 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderTable(data) {
     if (!Array.isArray(data) || data.length === 0) return;
-    
-    // Extract headers dynamically from object keys
+
     const headers = Object.keys(data[0]);
     tableHeaders.innerHTML = headers.map(h => `<th scope="col">${escapeHtml(h)}</th>`).join('');
 

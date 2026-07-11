@@ -1,0 +1,9 @@
+{
+  "id": "new-york-new-jersey",
+  "venueName": "MetLife Stadium",
+  "officialTournamentName": "New York New Jersey Stadium",
+  "capacity": 82500,
+      "zones": ["Club", "Field", "Mezzanine", "Upper"],
+      "city": "East Rutherford",
+      "country": "USA"
+}

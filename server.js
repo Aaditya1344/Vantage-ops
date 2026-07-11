@@ -7,6 +7,23 @@ const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
 require('dotenv').config();
+// Load Venue Config — one fixed venue per deployment
+const VENUE_CONFIG_PATH = path.join(__dirname, 'venue.config.json');
+let venueConfig = {
+  venueName: "MetLife Stadium",
+  officialTournamentName: "New York New Jersey Stadium",
+  capacity: 82500,
+  zones: ["Club", "Field", "Mezzanine", "Upper"],
+  city: "East Rutherford"
+};
+if (fs.existsSync(VENUE_CONFIG_PATH)) {
+  try {
+    venueConfig = JSON.parse(fs.readFileSync(VENUE_CONFIG_PATH, 'utf8'));
+    console.log('Loaded venue configuration:', venueConfig.venueName);
+  } catch (err) {
+    console.error('Failed to parse venue.config.json, using defaults:', err);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -292,6 +309,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// Get all venues + currently active one
+app.get('/api/venue-config', (req, res) => {
+  res.json(venueConfig);
+});
+
 // Status Endpoint
 app.get('/api/status', async (req, res) => {
   try {
@@ -335,9 +357,7 @@ app.post('/api/query', async (req, res) => {
 
     // Prepare live data JSON for prompt
     const liveDataJsonString = JSON.stringify(liveData, null, 2);
-
-    const systemPrompt = `You are the Volunteer Ops Copilot for New York New Jersey Stadium (MetLife Stadium), a FIFA World Cup 2026 host venue (capacity 82,500; zones: Club, Field, Mezzanine, Upper). You assist on-ground volunteers helping fans in real time.
-
+    const systemPrompt = `You are the Volunteer Ops Copilot for ${venueConfig.officialTournamentName} (${venueConfig.venueName}), a FIFA World Cup 2026 host venue (capacity ${venueConfig.capacity.toLocaleString()}; zones: ${venueConfig.zones.join(', ')}).
 You will receive:
 1. LIVE_DATA — a JSON snapshot of current stadium conditions (gate queue lengths, crowd inflow rates, incident logs, timestamps), parsed from a file uploaded by an organizer or judge. Always reason from whatever LIVE_DATA is given, never from memory of a previous request.
 2. SOP_CONTEXT — standard operating procedures for common situations (bottlenecks, medical incidents, lost items, lost children, evacuation, ticket disputes).
@@ -431,7 +451,7 @@ ${targetLanguage ? `Target Language for Translation: "${targetLanguage}"` : ''}
     };
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -485,7 +505,7 @@ ${targetLanguage ? `Target Language for Translation: "${targetLanguage}"` : ''}
       reasoning: aiResponse.reasoning,
       urgency: aiResponse.urgency,
       fan_facing_translation: aiResponse.fan_facing_translation,
-      datasetFilename: liveData.filename || 'No data uploaded'
+      datasetFilename: liveData.filename || 'No data uploaded',
     };
 
     await addHistoryEntry(historyEntry);

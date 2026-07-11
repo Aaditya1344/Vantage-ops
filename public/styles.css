@@ -1,25 +1,76 @@
 /* ----------------------------------------------------
    FIFA World Cup 2026 - MetLife Stadium Brand Palettes
    ---------------------------------------------------- */
-:root {
-  --bg-app: #030712;
-  --bg-surface: rgba(17, 24, 39, 0.7);
-  --border-glass: rgba(255, 255, 255, 0.08);
-  
-  --primary: #4f46e5;
-  --primary-hover: #6366f1;
-  --primary-accent: #00ff88; /* Neon pitch green */
-  
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+/* Dark theme (default) */
+:root,
+[data-theme="dark"] {
+  --bg-app: #0a0e1a;
+  --bg-surface: rgba(20, 27, 45, 0.75);
+  --border-glass: rgba(255, 255, 255, 0.10);
 
-  --color-low: #10b981;
+  --primary: #3b82f6;        /* stadium blue, replaces indigo */
+  --primary-hover: #60a5fa;
+  --primary-accent: #22d3ee; /* cyan/pitch-line accent */
+
+  --text-primary: #f8fafc;
+  --text-secondary: #a3adc2;
+  --text-muted: #6b7684;
+
+  --color-low: #22c55e;
   --color-medium: #f59e0b;
   --color-high: #ef4444;
 
   --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg-app: #f4f6fb;
+  --bg-surface: rgba(255, 255, 255, 0.85);
+  --border-glass: rgba(15, 23, 42, 0.10);
+
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-accent: #0891b2;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  --color-low: #16a34a;
+  --color-medium: #d97706;
+  --color-high: #dc2626;
+
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(34, 211, 238, 0.08) 0px, transparent 50%);
+  color: var(--text-primary);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="light"] body {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(8, 145, 178, 0.04) 0px, transparent 50%);
 }
 
 /* ----------------------------------------------------
@@ -72,12 +123,17 @@ body {
 /* Header styling */
 .app-header {
   border-bottom: 1px solid var(--border-glass);
-  background: rgba(17, 24, 39, 0.8);
+  background: rgba(10, 14, 26, 0.85);
   backdrop-filter: blur(12px);
   padding: 1.5rem 2rem;
   position: sticky;
   top: 0;
   z-index: 50;
+  transition: background-color 0.3s ease;
+}
+
+[data-theme="light"] .app-header {
+  background: rgba(244, 246, 251, 0.85);
 }
 
 .header-container {
@@ -95,7 +151,13 @@ body {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: -0.025em;
-  background: linear-gradient(to right, #ffffff, #c7d2fe, var(--primary-accent));
+  background: linear-gradient(to right, #ffffff, #93c5fd, var(--primary-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="light"] .brand h1 {
+  background: linear-gradient(to right, #0f172a, #2563eb, var(--primary-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -114,11 +176,45 @@ body {
   color: var(--text-secondary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-theme-toggle {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  color: var(--text-primary);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.btn-theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(1.05);
+}
+
+[data-theme="light"] .btn-theme-toggle {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="light"] .btn-theme-toggle:hover {
+  background: rgba(15, 23, 42, 0.1);
+}
+
 .header-status {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(120, 120, 120, 0.08);
   padding: 0.5rem 1rem;
   border-radius: 9999px;
   border: 1px solid var(--border-glass);
@@ -591,12 +687,13 @@ body {
 }
 
 .log-table th {
-  background: rgba(255, 255, 255, 0.03);
+  background: #0f1526; /* solid, not transparent — matches your dark bg tone */
   font-weight: 700;
   color: var(--text-secondary);
   position: sticky;
   top: 0;
   z-index: 10;
+  box-shadow: 0 1px 0 var(--border-glass); /* subtle separation line */
 }
 
 .log-table td {
