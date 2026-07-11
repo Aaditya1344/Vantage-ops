@@ -148,8 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
       displayAIResponse(result);
       refreshHistory();
     } catch (err) {
-      alert(`Query failed: ${err.message}`);
-      responseEmpty.classList.remove('hidden');
+      showFriendlyError(err.errorCode, err.message);
     } finally {
       btnSubmit.disabled = false;
       responseLoading.classList.add('hidden');
@@ -185,7 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload CSV');
+        const error = new Error(errorData.error || 'Server error occurred');
+        error.errorCode = errorData.errorCode || null;
+        throw error;
       }
 
       const data = await response.json();
@@ -277,6 +278,39 @@ document.addEventListener('DOMContentLoaded', () => {
     responseCard.classList.add('hidden');
     responseEmpty.classList.remove('hidden');
   }
+  function showFriendlyError(errorCode, message) {
+    responseCard.classList.add('hidden');
+    responseEmpty.classList.add('hidden');
+
+    const friendlyText = errorCode === 'copilot_busy'
+      ? "The Copilot is a bit busy right now — please try asking again in a moment."
+      : "Something went wrong processing that question. Please try again.";
+
+    let errorBox = document.getElementById('response-error');
+    if (!errorBox) {
+      errorBox = document.createElement('div');
+      errorBox.id = 'response-error';
+      errorBox.className = 'response-placeholder';
+      responseConsole.appendChild(errorBox);
+    }
+
+    errorBox.innerHTML = `
+      <span class="placeholder-icon" aria-hidden="true">⚠️</span>
+      <h3>Query Failed</h3>
+      <p>${escapeHtml(friendlyText)}</p>
+      <button type="button" id="btn-retry-query" class="btn btn-primary text-sm" style="margin-top: 0.75rem;">
+        Retry
+      </button>
+    `;
+    errorBox.classList.remove('hidden');
+
+    document.getElementById('btn-retry-query').addEventListener('click', () => {
+      errorBox.classList.add('hidden');
+      queryForm.requestSubmit();
+    });
+    errorBox.setAttribute('tabindex', '-1');
+    errorBox.focus();
+  }
 
   function displayAIResponse(ai) {
     resultRecommendation.textContent = ai.recommendation;
@@ -301,6 +335,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     responseCard.classList.remove('hidden');
+    responseCard.setAttribute('tabindex', '-1');
+    responseCard.focus();
   }
 
   function renderTable(data) {

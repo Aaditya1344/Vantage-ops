@@ -8,8 +8,8 @@
   --bg-surface: rgba(20, 27, 45, 0.75);
   --border-glass: rgba(255, 255, 255, 0.10);
 
-  --primary: #3b82f6;        /* stadium blue, replaces indigo */
-  --primary-hover: #60a5fa;
+  --primary: #1d4ed8;        /* darker stadium blue */
+--primary-hover: #2563eb;
   --primary-accent: #22d3ee; /* cyan/pitch-line accent */
 
   --text-primary: #f8fafc;

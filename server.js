@@ -273,6 +273,36 @@ function extractNumbersFromData(liveData) {
 
   return numbers;
 }
+// ----------------------------------------------------
+// Gemini API call with retry/backoff on 503/429
+// ----------------------------------------------------
+async function callGeminiWithRetry(url, apiBody, maxRetries = 2) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(apiBody)
+    });
+
+    if (response.ok) {
+      return response;
+    }
+
+    // Only retry on overload (503) or rate limit (429)
+    if ((response.status === 503 || response.status === 429) && attempt < maxRetries) {
+      const waitMs = 1000 * Math.pow(2, attempt); // 1s, then 2s
+      console.warn(`Gemini API returned ${response.status}, retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+      await new Promise(resolve => setTimeout(resolve, waitMs));
+      lastError = response;
+      continue;
+    }
+
+    // Non-retryable error, or retries exhausted
+    return response;
+  }
+  return lastError;
+}
 
 // ----------------------------------------------------
 // API Route Handlers
@@ -450,18 +480,24 @@ ${targetLanguage ? `Target Language for Translation: "${targetLanguage}"` : ''}
       }
     };
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiBody)
-      }
-    );
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
+    const response = await callGeminiWithRetry(geminiUrl, apiBody);
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Gemini API Request failed with status ${response.status}: ${errorText}`);
+      console.error(`Gemini API failed after retries with status ${response.status}: ${errorText}`);
+
+      if (response.status === 503 || response.status === 429) {
+        return res.status(503).json({
+          errorCode: 'copilot_busy',
+          error: 'The AI service is experiencing high demand. Please try your question again in a few seconds.'
+        });
+      }
+
+      return res.status(502).json({
+        errorCode: 'copilot_error',
+        error: 'Something went wrong processing that question. Please try again.'
+      });
     }
 
     const result = await response.json();
@@ -513,7 +549,10 @@ ${targetLanguage ? `Target Language for Translation: "${targetLanguage}"` : ''}
     res.json(aiResponse);
   } catch (err) {
     console.error('API query failed:', err);
-    res.status(500).json({ error: 'Failed to process question: ' + err.message });
+    res.status(500).json({
+      errorCode: 'copilot_error',
+      error: 'Something went wrong processing that question. Please try again.'
+    });
   }
 });
 
