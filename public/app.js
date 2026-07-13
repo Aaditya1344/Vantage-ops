@@ -190,7 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const data = await response.json();
-      alert(`Success! File "${data.filename}" parsed as "${data.type}" schema with ${data.recordCount} rows.`);
+      const detailText = data.type === 'pdf_text'
+        ? `Success! PDF "${data.filename}" processed — text extracted and ready for Copilot reasoning.`
+        : `Success! File "${data.filename}" parsed as "${data.type}" schema with ${data.recordCount} rows.`;
+      alert(detailText);
       refreshStatus();
     } catch (err) {
       alert(`Upload failed: ${err.message}`);

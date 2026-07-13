@@ -6,6 +6,7 @@ const { Readable } = require('stream');
 const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
+const { PDFParse } = require('pdf-parse');
 require('dotenv').config();
 // Load Venue Config — one fixed venue per deployment
 const VENUE_CONFIG_PATH = path.join(__dirname, 'venue.config.json');
@@ -33,7 +34,18 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Configure Multer for in-memory file handling
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.csv', '.pdf'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .csv and .pdf files are accepted.'));
+    }
+  }
+});
 
 // Local JSON File Database Fallback
 const LOCAL_DB_PATH = path.join(__dirname, 'local_db.json');
@@ -216,6 +228,11 @@ function parseCSV(buffer) {
       });
   });
 }
+async function parsePDF(buffer) {
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text.trim();
+}
 
 function detectSchema(data) {
   if (!Array.isArray(data) || data.length === 0) {
@@ -315,29 +332,52 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const rawData = await parseCSV(req.file.buffer);
-    const type = detectSchema(rawData);
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    let liveDataSnapshot;
 
-    const liveDataSnapshot = {
-      type: type,
-      timestamp: new Date().toISOString(),
-      filename: req.file.originalname,
-      data: rawData
-    };
+    if (ext === '.pdf') {
+      const extractedText = await parsePDF(req.file.buffer);
+      if (!extractedText) {
+        return res.status(400).json({ error: 'PDF contained no extractable text.' });
+      }
+      liveDataSnapshot = {
+        type: 'pdf_text',
+        timestamp: new Date().toISOString(),
+        filename: req.file.originalname,
+        rawText: extractedText,
+        data: [] // kept for consistency with CSV shape; grounding guard checks 'data'
+      };
+    } else {
+      const rawData = await parseCSV(req.file.buffer);
+      const type = detectSchema(rawData);
+      liveDataSnapshot = {
+        type: type,
+        timestamp: new Date().toISOString(),
+        filename: req.file.originalname,
+        data: rawData
+      };
+    }
 
     await setLiveData(liveDataSnapshot);
 
     res.json({
       success: true,
-      type: type,
-      recordCount: rawData.length,
+      type: liveDataSnapshot.type,
+      recordCount: liveDataSnapshot.data ? liveDataSnapshot.data.length : 0,
       filename: req.file.originalname
     });
   } catch (err) {
     console.error('Upload parsing failed:', err);
-    res.status(500).json({ error: 'Failed to parse CSV file: ' + err.message });
+    res.status(500).json({ error: 'Failed to parse file: ' + err.message });
   }
 });
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err.message);
+  if (!res.headersSent) {
+    res.status(400).json({ error: err.message || 'An unexpected error occurred.' });
+  }
+});
+
 
 // Get all venues + currently active one
 app.get('/api/venue-config', (req, res) => {
@@ -386,7 +426,9 @@ app.post('/api/query', async (req, res) => {
     }
 
     // Prepare live data JSON for prompt
-    const liveDataJsonString = JSON.stringify(liveData, null, 2);
+    const liveDataJsonString = liveData.type === 'pdf_text'
+      ? JSON.stringify({ type: 'pdf_text', filename: liveData.filename, extractedText: liveData.rawText }, null, 2)
+      : JSON.stringify(liveData, null, 2);
     const systemPrompt = `You are the Volunteer Ops Copilot for ${venueConfig.officialTournamentName} (${venueConfig.venueName}), a FIFA World Cup 2026 host venue (capacity ${venueConfig.capacity.toLocaleString()}; zones: ${venueConfig.zones.join(', ')}).
 You will receive:
 1. LIVE_DATA — a JSON snapshot of current stadium conditions (gate queue lengths, crowd inflow rates, incident logs, timestamps), parsed from a file uploaded by an organizer or judge. Always reason from whatever LIVE_DATA is given, never from memory of a previous request.
