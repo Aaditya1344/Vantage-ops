@@ -320,6 +320,23 @@ document.addEventListener('DOMContentLoaded', () => {
     resultReasoning.textContent = ai.reasoning;
 
     urgencyBadge.className = `urgency-badge ${ai.urgency}`;
+    let groundingBox = document.getElementById('grounding-indicator');
+    if (!groundingBox) {
+      groundingBox = document.createElement('div');
+      groundingBox.id = 'grounding-indicator';
+      groundingBox.className = 'grounding-indicator';
+      responseCard.querySelector('.response-card-header').after(groundingBox);
+    }
+
+    if (ai.isGrounded === true) {
+      groundingBox.className = 'grounding-indicator verified';
+      groundingBox.innerHTML = `<span aria-hidden="true">✓</span> Verified against live data`;
+    } else if (ai.isGrounded === false) {
+      groundingBox.className = 'grounding-indicator unverified';
+      groundingBox.innerHTML = `<span aria-hidden="true">⚠</span> No matching data found — response may be generic`;
+    } else {
+      groundingBox.className = 'grounding-indicator hidden';
+    }
     urgencyText.textContent = ai.urgency;
     if (ai.urgency === 'high') {
       urgencyIcon.textContent = '🚨';

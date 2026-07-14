@@ -567,11 +567,16 @@ ${targetLanguage ? `Target Language for Translation: "${targetLanguage}"` : ''}
         }
       }
 
+      aiResponse.isGrounded = isGrounded;
+
       if (!isGrounded) {
         console.warn(`[WARNING] Grounding safeguard failed: AI response reasoning does not cite any numeric data from the active LIVE_DATA snapshot. Reasoning given: "${reasoningText}"`);
       } else {
         console.log('[INFO] Grounding safeguard passed: AI response contains validated live data citation.');
       }
+    } else {
+      // No numeric data available to check against (e.g. empty snapshot, or a PDF)
+      aiResponse.isGrounded = null;
     }
 
     // Add entry to history/ops log
