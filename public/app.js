@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.ok) {
         const venue = await response.json();
         venueSubtitle.textContent = `${venue.officialTournamentName} (${venue.venueName}) • Capacity: ${venue.capacity.toLocaleString()}`;
-        document.title = `Volunteer Ops Copilot — ${venue.venueName}`;
+        document.title = `Vantage Ops — ${venue.venueName}`;
       } else {
         venueSubtitle.textContent = 'MetLife Stadium • Capacity: 82,500';
       }
@@ -368,15 +368,5 @@ document.addEventListener('DOMContentLoaded', () => {
     tableBody.innerHTML = data.map(row => {
       return `<tr>${headers.map(h => `<td>${escapeHtml(row[h] || '')}</td>`).join('')}</tr>`;
     }).join('');
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
   }
 });
