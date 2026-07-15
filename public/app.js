@@ -38,6 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const themeToggleIcon = document.getElementById('theme-toggle-icon');
   const venueSubtitle = document.getElementById('venue-subtitle');
   const speechLang = document.getElementById('speech-lang');
+
+  // urgency banner
+  const urgencyBanner = document.getElementById('urgency-banner');
+  const urgencyBannerText = document.getElementById('urgency-banner-text');
+  const urgencyBannerDismiss = document.getElementById('urgency-banner-dismiss');
+
+  // freshness warning
+  const freshnessWarning = document.getElementById('freshness-warning');
+  const freshnessWarningText = document.getElementById('freshness-warning-text');
   // Base API URL
   const API_BASE = '';
 
@@ -120,6 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Theme Toggle Event Listener
   themeToggle.addEventListener('click', () => {
     applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+  });
+  urgencyBannerDismiss.addEventListener('click', () => {
+    urgencyBanner.classList.add('hidden');
   });
 
   // Initial Load
@@ -296,6 +308,17 @@ document.addEventListener('DOMContentLoaded', () => {
         metaType.textContent = formatSchemaType(status.type);
         metaCount.textContent = status.recordCount;
         metaTimestamp.textContent = new Date(status.timestamp).toLocaleTimeString();
+        // Data freshness check — warn if snapshot is older than 30 minutes
+        if (status.timestamp) {
+          const uploadedAt = new Date(status.timestamp);
+          const ageMinutes = Math.floor((Date.now() - uploadedAt.getTime()) / 60000);
+          if (ageMinutes >= 30) {
+            freshnessWarningText.textContent = `⚠ Data snapshot is ${ageMinutes} minutes old — consider uploading a fresh snapshot`;
+            freshnessWarning.classList.remove('hidden');
+          } else {
+            freshnessWarning.classList.add('hidden');
+          }
+        }
 
         renderTable(status.data);
       } else {
@@ -304,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
         metaType.textContent = '—';
         metaCount.textContent = '—';
         metaTimestamp.textContent = '—';
+        freshnessWarning.classList.add('hidden');
 
         tableHeaders.innerHTML = `<th scope="col">No data loaded</th>`;
         tableBody.innerHTML = `<tr><td>Please upload a CSV dataset to view real-time records.</td></tr>`;
@@ -438,6 +462,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     responseCard.classList.remove('hidden');
+    // Show urgency banner for high urgency responses
+    if (ai.urgency === 'high') {
+      urgencyBannerText.textContent = `🚨 High urgency incident detected — immediate action required`;
+      urgencyBanner.classList.remove('hidden');
+      urgencyBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (ai.urgency === 'medium') {
+      urgencyBannerText.textContent = `⚠ Medium urgency situation — monitor and be ready to act`;
+      urgencyBanner.classList.remove('hidden');
+    } else {
+      urgencyBanner.classList.add('hidden');
+    }
     responseCard.setAttribute('tabindex', '-1');
     responseCard.focus();
   }

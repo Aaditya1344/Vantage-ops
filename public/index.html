@@ -32,6 +32,11 @@
   </header>
 
   <main id="main-content" class="app-container" role="main">
+    <div id="urgency-banner" class="urgency-banner hidden" role="alert" aria-live="assertive">
+      <span id="urgency-banner-icon">🚨</span>
+      <span id="urgency-banner-text">High urgency incident detected — immediate action required</span>
+      <button id="urgency-banner-dismiss" class="urgency-banner-dismiss" aria-label="Dismiss alert">✕</button>
+    </div>
     <div class="grid-layout">
       
       <!-- LEFT PANEL: Upload & Active Snapshot Info -->
@@ -55,6 +60,10 @@
 
         <div id="snapshot-details" class="snapshot-details" aria-live="polite">
           <h3 class="subsection-title">Active Snapshot Overview</h3>
+          <div id="freshness-warning" class="freshness-warning hidden" role="status" aria-live="polite">
+            <span>⚠</span>
+            <span id="freshness-warning-text">Data snapshot may be outdated</span>
+          </div>
           <div class="snapshot-meta-grid">
             <div class="meta-item">
               <span class="meta-label">File Source:</span>
@@ -105,6 +114,7 @@
               placeholder="Type or tap 🎤 for fan to speak in their language..."
               required class="form-input">
             <select id="speech-lang" class="speech-lang-select hidden" aria-label="Fan's spoken language">
+                <option value="en-US">English</option>
                 <option value="es-ES">Spanish</option>
                 <option value="fr-FR">French</option>
                 <option value="pt-BR">Portuguese</option>
