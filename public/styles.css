@@ -1000,4 +1000,38 @@ body {
   #btn-submit {
     grid-column: 1 / -1; /* full width */
   }
+  /* Nuclear option for grid — force single column absolutely */
+  .grid-layout,
+  .app-container > .grid-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  /* Fix ops feed panel width */
+  .ops-log-section {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Fix ALL panels to not overflow */
+  .panel,
+  .glass {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Fix app container itself */
+  .app-container {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    padding: 1rem !important;
+  }
+
+  /* Prevent body horizontal scroll */
+  body {
+    overflow-x: hidden !important;
+  }
 }
