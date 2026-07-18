@@ -8,7 +8,7 @@ const fs = require('fs');
 
 // Import security middleware
 const { queryLimiter, uploadLimiter } = require('./middleware/rateLimit');
-const { validateQuestion, validateFileUpload } = require('./middleware/inputValidator');
+const { validateQuestion, validateFileUpload } = require('./middleware/inputvalidator');
 
 // Import services
 const firestore = require('./services/firestore');
