@@ -327,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         metaType.textContent = '—';
         metaCount.textContent = '—';
         metaTimestamp.textContent = '—';
-        freshnessWarning.classList.add('hidden');
 
         tableHeaders.innerHTML = `<th scope="col">No data loaded</th>`;
         tableBody.innerHTML = `<tr><td>Please upload a CSV dataset to view real-time records.</td></tr>`;

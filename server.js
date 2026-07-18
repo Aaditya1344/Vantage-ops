@@ -1,34 +1,63 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Import security middleware
+const { queryLimiter, uploadLimiter } = require('./middleware/rateLimit');
+const { validateQuestion, validateFileUpload } = require('./middleware/inputValidator');
+
+// Import services
+const firestore = require('./services/firestore');
+const gemini = require('./services/gemini');
+
+// Initialize Firestore
+firestore.initFirestore();
+
+// Other imports (keep these as they were)
+const { PDFParse } = require('pdf-parse');
+const { translate } = require('google-translate-api-x');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
-const fs = require('fs');
-const path = require('path');
-const admin = require('firebase-admin');
-const { PDFParse } = require('pdf-parse');
-const LANGUAGE_CODES = {
-  'Spanish': 'es',
-  'French': 'fr',
-  'Portuguese': 'pt',
-  'German': 'de',
-  'Italian': 'it',
-  'Arabic': 'ar',
-  'Japanese': 'ja',
-  'Korean': 'ko',
-  'Hindi': 'hi',
-  'Chinese(Simplified)': 'zh-CN',
-  'Russian': 'ru',
-  'Turkish': 'tr',
-  'Dutch': 'nl',
-  'Polish': 'pl',
-  'Swedish': 'sv'
-};
-require('dotenv').config();
-const { translate } = require('google-translate-api-x');
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || null;
-// Load Venue Config — one fixed venue per deployment
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+// CORS configuration — tighter security
+const corsOptions = {
+  origin: [
+    'http://localhost:8080',
+    'http://localhost:3000',
+    'https://vantage-ops.onrender.com'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+};
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Multer file upload
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.csv', '.pdf'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .csv and .pdf files are accepted.'));
+    }
+  }
+});
+
+// Load venue config
 const VENUE_CONFIG_PATH = path.join(__dirname, 'venue.config.json');
 let venueConfig = {
   venueName: "MetLife Stadium",
@@ -46,26 +75,9 @@ if (fs.existsSync(VENUE_CONFIG_PATH)) {
   }
 }
 
-const app = express();
-const PORT = process.env.PORT || 8080;
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Configure Multer for in-memory file handling
-const upload = multer({
-  storage: multer.memoryStorage(),
-  fileFilter: (req, file, cb) => {
-    const allowed = ['.csv', '.pdf'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only .csv and .pdf files are accepted.'));
-    }
-  }
-});
 
 // Local JSON File Database Fallback
 const LOCAL_DB_PATH = path.join(__dirname, 'local_db.json');
@@ -98,19 +110,6 @@ function saveLocalDb() {
 // Initialize Firestore with fallback
 let db = null;
 let useLocalDb = true;
-
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_CONFIG) {
-  try {
-    admin.initializeApp();
-    db = admin.firestore();
-    useLocalDb = false;
-    console.log('Firebase initialized successfully. Using Firestore.');
-  } catch (e) {
-    console.warn('Firebase failed to initialize. Falling back to local store.', e.message);
-  }
-} else {
-  console.log('No Firebase credentials found. Running in local fallback mode (local_db.json).');
-}
 
 // Database CRUD Abstraction
 async function getLiveData() {
@@ -405,7 +404,7 @@ async function translateText(text, targetLangCode) {
 // ----------------------------------------------------
 
 // Upload Endpoint
-app.post('/api/upload', upload.single('file'), async (req, res) => {
+app.post('/api/upload', validateFileUpload, uploadLimiter,  upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -437,7 +436,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       };
     }
 
-    await setLiveData(liveDataSnapshot);
+    await firestore.setLiveData(liveDataSnapshot);
 
     res.json({
       success: true,
@@ -466,7 +465,7 @@ app.get('/api/venue-config', (req, res) => {
 // Status Endpoint
 app.get('/api/status', async (req, res) => {
   try {
-    const liveData = await getLiveData();
+    const liveData = await firestore.getLiveData();
     res.json({
       type: liveData.type || 'empty',
       timestamp: liveData.timestamp || null,
@@ -490,14 +489,14 @@ app.post('/api/clear', async (req, res) => {
 });
 
 // Query Endpoint
-app.post('/api/query', async (req, res) => {
+app.post('/api/query', queryLimiter, validateQuestion, async (req, res) => {
   try {
     const { question } = req.body;
     if (!question) {
       return res.status(400).json({ error: 'Question is required' });
     }
 
-    const liveData = await getLiveData();
+    const liveData = await firestore.getLiveData();
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
@@ -606,8 +605,8 @@ Response:
     try {
       // --- Try Gemini first ---
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`;
-      const geminiResponse = await withTimeout(
-        callGeminiWithRetry(geminiUrl, apiBody),
+      const geminiResponse = await gemini.withTimeout(
+        gemini.callGeminiWithRetry(geminiUrl, apiBody),
         45000 // 45 seconds — adjust to 30000 or 60000 if needed
       );
 
@@ -625,7 +624,7 @@ Response:
       // --- Fallback to Groq ---
       console.warn('Switching to Groq fallback:', geminiErr.message);
       try {
-        aiResponse = await callGroq(systemPrompt, userContent);
+        aiResponse = await gemini.callGroq(systemPrompt, userContent);
         usedProvider = 'groq';
         console.log('Groq fallback succeeded.');
       } catch (groqErr) {
@@ -703,7 +702,7 @@ Response:
       provider: usedProvider
     };
 
-    await addHistoryEntry(historyEntry);
+    await firestore.addHistoryEntry(historyEntry);
 
     res.json(aiResponse);
   } catch (err) {
@@ -718,7 +717,7 @@ Response:
 // History Endpoint
 app.get('/api/history', async (req, res) => {
   try {
-    const history = await getHistory();
+    const history = await firestore.getHistory();
     res.json(history);
   } catch (err) {
     res.status(500).json({ error: err.message });

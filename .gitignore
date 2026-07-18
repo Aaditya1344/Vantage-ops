@@ -1,5 +1,4 @@
 .env
 /node_modules
-local_dv.json
-firebase-service_account.json
 local_db.json
+firebase-service-account.json
