@@ -1,17 +1,29 @@
 const rateLimit = require('express-rate-limit');
+const {
+  RATE_LIMIT_WINDOW_MS,
+  QUERY_RATE_LIMIT,
+  UPLOAD_RATE_LIMIT
+} = require('../config/constants');
 
+/**
+ * Rate limiter for AI query endpoint.
+ * Prevents API quota abuse and DoS attacks.
+ */
 const queryLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 30,
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: QUERY_RATE_LIMIT,
   message: { error: 'Too many queries from this IP. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
-  // No custom keyGenerator — let express-rate-limit handle IPv6 correctly
 });
 
+/**
+ * Rate limiter for file upload endpoint.
+ * Stricter limit since uploads trigger heavier processing.
+ */
 const uploadLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: UPLOAD_RATE_LIMIT,
   message: { error: 'Too many uploads. Please wait before uploading again.' },
   standardHeaders: true,
   legacyHeaders: false

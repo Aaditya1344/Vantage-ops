@@ -6,10 +6,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint . --ext .js --ignore-pattern node_modules/ --ignore-pattern public/ --ignore-pattern coverage/"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "dotenv": "^16.4.5",
@@ -17,14 +19,17 @@
     "express-rate-limit": "^8.6.0",
     "firebase-admin": "^12.1.0",
     "google-translate-api-x": "^10.7.3",
+    "helmet": "^8.3.0",
+    "morgan": "^1.11.0",
     "multer": "^1.4.5-lts.1",
     "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
+    "eslint": "^10.7.0",
     "jest": "^30.4.2"
   },
   "engines": {
-  "node": ">=20.0.0"
+    "node": ">=20.0.0"
   },
   "jest": {
     "testEnvironment": "node",

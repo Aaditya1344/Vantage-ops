@@ -1,5 +1,9 @@
 require('dotenv').config();
 
+const compression = require('compression');
+const helmet = require('helmet');
+const morgan = require('morgan');
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -37,6 +41,13 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+app.use(helmet({
+  contentSecurityPolicy: false // disabled to allow inline scripts in public/
+}));
+app.use(compression());
+app.use(morgan('combined'));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 

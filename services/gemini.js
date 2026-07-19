@@ -1,4 +1,4 @@
-/*
+/**
  Calls Gemini API with exponential backoff retry on 503/429 errors
  @param {string} url - Gemini API endpoint URL
  @param {Object} apiBody - Request body for Gemini API
@@ -31,7 +31,7 @@ async function callGeminiWithRetry(url, apiBody, maxRetries = 2) {
   return lastError;
 }
 
-/*
+/**
  * Calls Groq API as fallback when Gemini is unavailable
  * @param {string} systemPrompt - System prompt for the AI
  * @param {string} userContent - User content including LIVE_DATA and question
@@ -67,7 +67,7 @@ async function callGroq(systemPrompt, userContent) {
   const text = result.choices[0].message.content;
   return JSON.parse(text);
 }
-/*
+/**
  * Wraps a promise with a timeout — rejects if promise doesn't resolve within ms
  * @param {Promise} promise - Promise to wrap
  * @param {number} ms - Timeout in milliseconds

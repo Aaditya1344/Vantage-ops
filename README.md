@@ -1,7 +1,7 @@
 # Vantage Ops — FIFA World Cup 2026 Volunteer Operations Copilot
 
 > **PromptWars Virtual — Challenge 4: Smart Stadiums & Tournament Operations**  
-> Built with Gemini AI · Deployed on Render · Powered by Firebase Firestore
+> Built with Gemini AI & AntiGravity · Deployed on Render · Powered by Firebase Firestore
 
 **Live Demo:** https://vantage-ops.onrender.com
 

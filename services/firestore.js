@@ -13,24 +13,6 @@ const DEFAULT_DB = {
   history: []
 };
 
-function readLocalDb() {
-  try {
-    if (!fs.existsSync(LOCAL_DB_PATH)) {
-      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
-      return DEFAULT_DB;
-    }
-    return JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf8'));
-  } catch (err) {
-    console.warn('local_db.json unreadable, resetting:', err.message);
-    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
-    return { ...DEFAULT_DB };
-  }
-}
-
-function writeLocalDb(data) {
-  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
-}
-
 // In-memory cache — avoids disk reads on every request
 let memoryCache = null;
 
@@ -126,7 +108,8 @@ async function addHistoryEntry(entry) {
   entry.resolved = false;
 
   if (useLocalDb) {
-    const data = readLocalDb();    data.history.unshift(entry);
+    const data = readLocalDb();
+    data.history.unshift(entry);
     if (data.history.length > 6) data.history = data.history.slice(0, 6);
     writeLocalDb(data);
   } else {

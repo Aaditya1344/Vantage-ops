@@ -16,6 +16,7 @@ COPY middleware/ ./middleware/
 COPY services/ ./services/
 COPY public/ ./public/
 COPY venue.config.json ./
+COPY config/ ./config/
 
 # Expose port
 EXPOSE 8080
