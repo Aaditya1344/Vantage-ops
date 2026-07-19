@@ -1,5 +1,0 @@
-timestamp,incident_type,location,status,minutes_since_report
-2026-07-11T13:58:00Z,medical,Section 128 Mezzanine,reported,2
-2026-07-11T13:40:00Z,lost_item,Gate B concourse Field Level,resolved,0
-2026-07-11T13:35:00Z,crowd_bottleneck,Gate C Mezzanine,ongoing,27
-2026-07-11T14:04:00Z,lost_child,Section 205 Upper Level,reported,1
