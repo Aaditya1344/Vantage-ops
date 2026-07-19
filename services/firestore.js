@@ -31,7 +31,36 @@ function writeLocalDb(data) {
   fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
 }
 
-// Initialize Firestore
+// In-memory cache — avoids disk reads on every request
+let memoryCache = null;
+
+function readLocalDb() {
+  if (memoryCache) return memoryCache; // return cache if available
+  try {
+    if (!fs.existsSync(LOCAL_DB_PATH)) {
+      memoryCache = { ...DEFAULT_DB };
+      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(memoryCache, null, 2));
+      return memoryCache;
+    }
+    memoryCache = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf8'));
+    return memoryCache;
+  } catch (err) {
+    console.warn('local_db.json unreadable, resetting:', err.message);
+    memoryCache = { ...DEFAULT_DB };
+    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(memoryCache, null, 2));
+    return memoryCache;
+  }
+}
+
+function writeLocalDb(data) {
+  memoryCache = data; // update cache
+  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Initializes Firebase Admin SDK using service account credentials
+ * Supports both file-based (local) and env var (Render) credential loading
+ */
 function initFirestore() {
   try {
     let serviceAccount = null;
@@ -84,6 +113,13 @@ async function setLiveData(liveData) {
     await db.collection('stadium_state').doc('live').set(liveData, { merge: true });
   }
 }
+
+/**
+ * Adds a history entry to local display cache and archives to Firestore
+ * Local cache keeps last 6 entries for fast display
+ * Firestore keeps permanent record for post-match review
+ * @param {Object} entry - History entry object
+ */
 
 async function addHistoryEntry(entry) {
   entry.timestamp = entry.timestamp || new Date().toISOString();
