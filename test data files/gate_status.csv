@@ -1,0 +1,8 @@
+timestamp,gate,queue_length,capacity,inflow_rate_per_min,zone
+2026-07-11T14:00:00Z,Gate A - Club Level,320,900,18,Club
+2026-07-11T14:00:00Z,Gate B - Field Level,600,900,25,Field
+2026-07-11T14:00:00Z,Gate C - Mezzanine,850,1000,42,Mezzanine
+2026-07-11T14:00:00Z,Gate D - Upper Level,400,850,20,Upper
+2026-07-11T14:00:00Z,Gate E - Upper Level,210,950,15,Upper
+2026-07-11T14:02:00Z,Gate C - Mezzanine,890,1000,45,Mezzanine
+2026-07-11T14:02:00Z,Gate A - Club Level,340,900,19,Club

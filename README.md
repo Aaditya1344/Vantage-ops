@@ -198,7 +198,6 @@ Upload these sample files to test the system:
 |---|---|---|
 | `gate_status.csv` | gate_status | Crowd bottleneck, gate redirect |
 | `incident_log.csv` | incident_log | Medical escalation, lost child |
-| `gate_status_update.pdf` | pdf_text | PDF reasoning, mixed scenario |
 | `malformed_test.csv` | generic | Edge case handling |
 
 ---
@@ -315,7 +314,3 @@ To deploy for a different FIFA 2026 host venue, update this file and redeploy. O
 - File uploads validated by extension and size (not MIME type — unreliable across OS)
 
 ---
-
-## License
-
-Built for FIFA World Cup 2026 operations context. Internal volunteer use only.
