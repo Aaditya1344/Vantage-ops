@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elements
   const fileInput = document.getElementById('file-input');
   const uploadZone = document.getElementById('upload-zone');
-  const btnClear = document.getElementById('btn-clear');
 
   const metaFilename = document.getElementById('meta-filename');
   const metaType = document.getElementById('meta-type');
@@ -248,21 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
       responseLoading.classList.add('hidden');
       responseConsole.setAttribute('aria-busy', 'false');
       stopLoadingMessages();
-    }
-  });
-
-  // Clear Handler
-  btnClear.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to clear the active live data snapshot and history logs?')) return;
-    try {
-      const response = await fetch(`${API_BASE}/api/clear`, { method: 'POST' });
-      if (response.ok) {
-        refreshStatus();
-        refreshHistory();
-        resetAIConsole();
-      }
-    } catch (err) {
-      console.error('Clear failed:', err);
     }
   });
 

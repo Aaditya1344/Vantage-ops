@@ -10,14 +10,12 @@ const fs = require('fs');
 const { queryLimiter, uploadLimiter } = require('./middleware/rateLimit');
 const { validateQuestion, validateFileUpload } = require('./middleware/inputvalidator');
 
-// Import services
 const firestore = require('./services/firestore');
 const gemini = require('./services/gemini');
 
-// Initialize Firestore
+// Initializing Firestore
 firestore.initFirestore();
 
-// Other imports (keep these as they were)
 const { PDFParse } = require('pdf-parse');
 const { translate } = require('google-translate-api-x');
 const csv = require('csv-parser');
@@ -404,7 +402,7 @@ async function translateText(text, targetLangCode) {
 // ----------------------------------------------------
 
 // Upload Endpoint
-app.post('/api/upload', validateFileUpload, uploadLimiter,  upload.single('file'), async (req, res) => {
+app.post('/api/upload',  uploadLimiter,upload.single('file'), validateFileUpload, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -437,6 +435,7 @@ app.post('/api/upload', validateFileUpload, uploadLimiter,  upload.single('file'
     }
 
     await firestore.setLiveData(liveDataSnapshot);
+    await firestore.clearHistory();
 
     res.json({
       success: true,
@@ -473,16 +472,6 @@ app.get('/api/status', async (req, res) => {
       recordCount: liveData.data ? liveData.data.length : 0,
       data: liveData.data || []
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Clear Endpoint
-app.post('/api/clear', async (req, res) => {
-  try {
-    await clearDatabase();
-    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -718,8 +707,9 @@ Response:
 app.get('/api/history', async (req, res) => {
   try {
     const history = await firestore.getHistory();
-    res.json(history);
+    res.json(Array.isArray(history) ? history : []);
   } catch (err) {
+    console.error('[DEBUG] getHistory error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -729,6 +719,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0' , () => {
   console.log(`Volunteer Ops Copilot server running on port ${PORT}`);
 });

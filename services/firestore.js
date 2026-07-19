@@ -6,6 +6,31 @@ const path = require('path');
 let db = null;
 let useLocalDb = true;
 
+const LOCAL_DB_PATH = path.join(__dirname, '../local_db.json');
+
+const DEFAULT_DB = {
+  liveData: { type: 'empty', timestamp: null, data: [] },
+  history: []
+};
+
+function readLocalDb() {
+  try {
+    if (!fs.existsSync(LOCAL_DB_PATH)) {
+      fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
+      return DEFAULT_DB;
+    }
+    return JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf8'));
+  } catch (err) {
+    console.warn('local_db.json unreadable, resetting:', err.message);
+    fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(DEFAULT_DB, null, 2));
+    return { ...DEFAULT_DB };
+  }
+}
+
+function writeLocalDb(data) {
+  fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(data, null, 2));
+}
+
 // Initialize Firestore
 function initFirestore() {
   try {
@@ -43,7 +68,7 @@ function initFirestore() {
 
 async function getLiveData() {
   if (useLocalDb) {
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+    const data = readLocalDb();
     return data.liveData;
   }
   const doc = await db.collection('stadium_state').doc('live').get();
@@ -52,9 +77,9 @@ async function getLiveData() {
 
 async function setLiveData(liveData) {
   if (useLocalDb) {
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+    const data = readLocalDb();
     data.liveData = liveData;
-    fs.writeFileSync(require('path').join(__dirname, '../local_db.json'), JSON.stringify(data, null, 2));
+    writeLocalDb(data);
   } else {
     await db.collection('stadium_state').doc('live').set(liveData, { merge: true });
   }
@@ -65,17 +90,15 @@ async function addHistoryEntry(entry) {
   entry.resolved = false;
 
   if (useLocalDb) {
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
-    data.history.unshift(entry);
+    const data = readLocalDb();    data.history.unshift(entry);
     if (data.history.length > 6) data.history = data.history.slice(0, 6);
-    fs.writeFileSync(require('path').join(__dirname, '../local_db.json'), JSON.stringify(data, null, 2));
+    writeLocalDb(data);
   } else {
     // Keep last 6 in memory
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+    const data = readLocalDb();
     data.history.unshift(entry);
     if (data.history.length > 6) data.history = data.history.slice(0, 6);
-    fs.writeFileSync(require('path').join(__dirname, '../local_db.json'), JSON.stringify(data, null, 2));
-
+    writeLocalDb(data);
     // Archive to Firestore
     try {
       await db.collection('history').add(entry);
@@ -87,13 +110,13 @@ async function addHistoryEntry(entry) {
 }
 
 async function getHistory() {
-  const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+  const data = readLocalDb();
   return data.history;
 }
 
 async function getArchive({ urgency, limit = 50 } = {}) {
   if (useLocalDb || !db) {
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+    const data = readLocalDb();
     return data.history;
   }
   try {
@@ -110,18 +133,40 @@ async function getArchive({ urgency, limit = 50 } = {}) {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (err) {
     console.error('[Firestore] getArchive failed:', err.message);
-    const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+    const data = readLocalDb();
     return data.history;
   }
 }
 
 async function clearDatabase() {
   const emptyData = { type: 'empty', timestamp: null, data: [] };
-  const data = JSON.parse(fs.readFileSync(require('path').join(__dirname, '../local_db.json'), 'utf8'));
+  const data = readLocalDb();
   data.liveData = emptyData;
   data.history = [];
-  fs.writeFileSync(require('path').join(__dirname, '../local_db.json'), JSON.stringify(data, null, 2));
+  writeLocalDb(data);
   console.log('[Local] Display data cleared. Firestore archive preserved.');
+}
+
+async function clearHistory() {
+  // Clear local display
+  const data = readLocalDb();
+  data.history = [];
+  writeLocalDb(data);
+
+  // Clear Firestore history for this deployment
+  if (!useLocalDb && db) {
+    try {
+      const snapshot = await db.collection('history').get();
+      if (!snapshot.empty) {
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        console.log('[Firestore] History cleared on new upload.');
+      }
+    } catch (err) {
+      console.error('[Firestore] Failed to clear history:', err.message);
+    }
+  }
 }
 
 module.exports = {
@@ -132,6 +177,7 @@ module.exports = {
   getHistory,
   getArchive,
   clearDatabase,
+  clearHistory,
   getDb: () => db,
   isUsingLocalDb: () => useLocalDb
 };
